@@ -4,319 +4,726 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>National Senior Citizen Mediclaim Policy Calculator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
     <style>
-        body { background-color: #f0f4f8; }
-        .table-container { max-height: 256px; overflow-y: auto; }
+        body {
+            background-color: #f0f4f8;
+            font-family: 'Helvetica', Arial, sans-serif;
+            font-size: 0.9rem;
+        }
+        .main-container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 15px;
+            background-color: #f0f4f8;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .title {
+            color: #1e3a8a;
+            font-size: 1.4rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .form-label {
+            font-size: 0.9rem;
+            color: #333;
+        }
+        .form-control, .form-select {
+            font-size: 0.9rem;
+            height: 30px;
+            padding: 4px 8px;
+        }
+        .form-check-label {
+            font-size: 0.9rem;
+        }
+        .btn-sm {
+            font-size: 0.9rem;
+            padding: 4px 8px;
+        }
+        .table-sm th, .table-sm td {
+            font-size: 0.8rem;
+            padding: 5px;
+        }
+        #resultTable_wrapper {
+            font-size: 0.8rem;
+        }
+        #resultTable thead th {
+            background-color: #d1e7dd;
+            font-weight: bold;
+        }
+        #resultTable tbody tr.selected {
+            background-color: #1e3a8a;
+            color: white;
+        }
+        .summary-label {
+            background-color: #e6f3fa;
+            color: #1e3a8a;
+            font-weight: bold;
+            text-align: center;
+            padding: 8px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        .zone-cities {
+            font-size: 0.8rem;
+            color: #555;
+        }
+        @media (max-width: 768px) {
+            .main-container {
+                margin: 10px;
+                padding: 10px;
+            }
+            .form-control, .form-select {
+                font-size: 0.8rem;
+            }
+            .btn-sm {
+                font-size: 0.8rem;
+            }
+        }
     </style>
 </head>
-<body class="font-sans">
-    <div id="app" class="flex justify-center items-center min-h-screen">
-        <div class="bg-gray-100 p-6 w-full max-w-4xl mx-auto rounded-lg shadow-lg">
-            <h1 class="text-2xl font-bold text-blue-900 text-center mb-4">
-                National Senior Citizen Mediclaim Policy Calculator
-            </h1>
-            <div id="error-message" class="text-red-500 text-center mb-4 hidden"></div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-                <div>
-                    <label class="text-sm font-medium">Policy Type:</label>
-                    <select id="policy-type" class="w-full p-1 text-sm border rounded">
-                        <option value="Individual">Individual</option>
+<body>
+    <div class="main-container">
+        <h1 class="title">National Senior Citizen Mediclaim Policy Calculator</h1>
+        <div class="input-section mb-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-2">
+                    <label class="form-label">Policy Type:</label>
+                    <select id="policyType" class="form-select">
+                        <option value="Individual" selected>Individual</option>
                         <option value="Floater">Floater</option>
                     </select>
                 </div>
-                <div>
-                    <label class="text-sm font-medium">Zone:</label>
-                    <select id="zone" class="w-full p-1 text-sm border rounded">
-                        <option value="Zone 1">Zone 1</option>
+                <div class="col-md-2">
+                    <label class="form-label">Zone:</label>
+                    <select id="zone" class="form-select">
+                        <option value="Zone 1" selected>Zone 1</option>
                         <option value="Zone 2">Zone 2</option>
                     </select>
                 </div>
-                <div class="col-span-1 sm:col-span-2">
-                    <p id="cities-label" class="text-sm text-gray-600"></p>
+                <div class="col-md-2">
+                    <div class="form-check mt-4">
+                        <input type="checkbox" id="tpa" class="form-check-input" checked>
+                        <label class="form-check-label" for="tpa">TPA (3.5%)</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <p id="zoneCities" class="zone-cities">Zone 1: Gujarat, Delhi NCT, Mumbai, Nagpur, Pune</p>
                 </div>
             </div>
-            <div class="mb-4 overflow-x-auto">
-                <table id="family-table" class="w-full border-collapse text-sm">
-                    <thead>
-                        <tr class="bg-green-100">
-                            <th class="border p-2">Name</th>
-                            <th class="border p-2">Age</th>
-                            <th class="border p-2">Rel.</th>
-                            <th class="border p-2">SI (?)</th>
-                            <th class="border p-2">Premium</th>
-                            <th class="border p-2">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="family-table-body"></tbody>
-                </table>
+            <div class="row g-2 align-items-center mt-2">
+                <div class="col-md-2">
+                    <label class="form-label">Plan:</label>
+                    <select id="planType" class="form-select">
+                        <option value="Plan A" selected>Plan A</option>
+                        <option value="Plan B">Plan B</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Co-pay (%):</label>
+                    <select id="copayment" class="form-select">
+                        <option value="0" selected>0</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Installment:</label>
+                    <select id="installment" class="form-select">
+                        <option value="None" selected>None</option>
+                        <option value="Half-Yearly">Half-Yearly</option>
+                        <option value="Quarterly">Quarterly</option>
+                    </select>
+                </div>
             </div>
-            <div class="flex space-x-2 mb-4">
-                <button id="add-row-btn" class="bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold">Add Row</button>
-                <button id="calculate-btn" class="bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold">Calculate</button>
-                <button id="reset-btn" class="bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold">Reset</button>
+        </div>
+        <div class="family-section mb-3">
+            <table id="familyTable" class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Age</th>
+                        <th>Gender</th>
+                        <th>Rel.</th>
+                        <th>SI (₹)</th>
+                        <th>Diab.</th>
+                        <th>Hyp.</th>
+                        <th>Outpatient (₹)</th>
+                        <th>PA SI (₹)</th>
+                        <th>CI SI (₹)</th>
+                        <th>Premium</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div class="button-group mt-2">
+                <button id="addRow" class="btn btn-primary btn-sm">Add Row</button>
+                <button id="calculate" class="btn btn-success btn-sm">Calculate</button>
+                <button id="reset" class="btn btn-danger btn-sm">Reset</button>
             </div>
-            <div class="border rounded p-2 mb-4 table-container">
-                <table id="result-table" class="w-full text-sm">
-                    <thead>
-                        <tr class="bg-green-100">
-                            <th class="border p-2 text-left">Description</th>
-                            <th class="border p-2 text-left">Amount (?)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="result-table-body"></tbody>
-                </table>
-            </div>
-            <div id="summary" class="bg-blue-100 text-blue-900 font-bold text-center p-2 rounded">
-                Premium will be displayed here
-            </div>
+        </div>
+        <div class="result-section">
+            <table id="resultTable" class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                        <th>Description (Base)</th>
+                        <th>Optional Covers</th>
+                        <th>Amount (₹)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div id="summaryLabel" class="summary-label">Premium will be displayed here</div>
         </div>
     </div>
 
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    <!-- Custom JS -->
     <script>
-        // Rate chart (simplified for Zone 1, Plan A, Individual)
-        const rates = {
-            "Zone 1": {
-                "Plan A": {
-                    "Individual": {
-                        "100000": {"60-65": 9233, "66-70": 13851, "71-75": 15958, "76-80": 18250, "81-85": 22453, "86+": 24699},
-                        "200000": {"60-65": 14431, "66-70": 21647, "71-75": 24938, "76-80": 28523, "81-85": 35084, "86+": 38594}
+        $(document).ready(function() {
+            const sumInsuredOptions = ["100000", "200000", "300000", "400000", "500000", "600000", "700000", "800000", "900000", "1000000"];
+            const outpatientOptions = ["0", "2000", "4000", "5000", "7500", "10000", "15000"];
+            let familyRows = [];
+
+            // Initialize DataTable for results
+            const resultTable = $('#resultTable').DataTable({
+                columns: [
+                    { title: "Description (Base)" },
+                    { title: "Optional Covers" },
+                    { title: "Amount (₹)" }
+                ],
+                pageLength: 10,
+                searching: false,
+                paging: false,
+                info: false
+            });
+
+            // Rate charts (ported from Python)
+            const rates = {
+                "Zone 1": {
+                    "Plan A": {
+                        "Individual": {
+                            "100000": {"60-65": 9233, "66-70": 13851, "71-75": 15958, "76-80": 18250, "81-85": 22453, "86+": 24699},
+                            "200000": {"60-65": 14431, "66-70": 21647, "71-75": 24938, "76-80": 28523, "81-85": 35084, "86+": 38594},
+                            "300000": {"60-65": 17921, "66-70": 26882, "71-75": 30969, "76-80": 35420, "81-85": 43570, "86+": 47926},
+                            "400000": {"60-65": 20589, "66-70": 30881, "71-75": 35576, "76-80": 40692, "81-85": 50050, "86+": 55056},
+                            "500000": {"60-65": 24705, "66-70": 37057, "71-75": 42693, "76-80": 48830, "81-85": 60062, "86+": 66068},
+                            "600000": {"60-65": 29507, "66-70": 44261, "71-75": 50990, "76-80": 58320, "81-85": 71734, "86+": 78909},
+                            "700000": {"60-65": 34860, "66-70": 52290, "71-75": 60240, "76-80": 68898, "81-85": 84793, "86+": 93271},
+                            "800000": {"60-65": 38345, "66-70": 57518, "71-75": 66264, "76-80": 75788, "81-85": 93271, "86+": 102598},
+                            "900000": {"60-65": 39930, "66-70": 59895, "71-75": 69002, "76-80": 78920, "81-85": 97125, "86+": 106835},
+                            "1000000": {"60-65": 41128, "66-70": 61693, "71-75": 71071, "76-80": 81289, "81-85": 100039, "86+": 110043}
+                        },
+                        "Dependent": {
+                            "100000": {"50-55": 2122, "56-60": 3543, "61-65": 5343, "66-70": 8302, "71-75": 9915, "76-80": 11760, "81-85": 14469, "86+": 15915},
+                            "200000": {"50-55": 3316, "56-60": 5538, "61-65": 8351, "66-70": 12974, "71-75": 15495, "76-80": 18379, "81-85": 22608, "86+": 24868},
+                            "300000": {"50-55": 4118, "56-60": 6877, "61-65": 10371, "66-70": 16112, "71-75": 19242, "76-80": 22824, "81-85": 28076, "86+": 30882},
+                            "400000": {"50-55": 4731, "56-60": 7901, "61-65": 11915, "66-70": 18509, "71-75": 22104, "76-80": 26220, "81-85": 32252, "86+": 35476},
+                            "500000": {"50-55": 5677, "56-60": 9480, "61-65": 14297, "66-70": 22210, "71-75": 26526, "76-80": 31465, "81-85": 38704, "86+": 42572},
+                            "600000": {"50-55": 6781, "56-60": 11323, "61-65": 17076, "66-70": 26528, "71-75": 31682, "76-80": 37579, "81-85": 46226, "86+": 50846},
+                            "700000": {"50-55": 8011, "56-60": 13378, "61-65": 20174, "66-70": 31340, "71-75": 37429, "76-80": 44396, "81-85": 54640, "86+": 60100},
+                            "800000": {"50-55": 8812, "56-60": 14715, "61-65": 22190, "66-70": 34474, "71-75": 41172, "76-80": 48835, "81-85": 60104, "86+": 66110},
+                            "900000": {"50-55": 9176, "56-60": 15323, "61-65": 23108, "66-70": 35898, "71-75": 42873, "76-80": 50854, "81-85": 62587, "86+": 68841},
+                            "1000000": {"50-55": 9452, "56-60": 15783, "61-65": 23801, "66-70": 36976, "71-75": 44159, "76-80": 52380, "81-85": 64465, "86+": 70908}
+                        }
+                    },
+                    "Plan B": {
+                        "Individual": {
+                            "100000": {"60-65": 12004, "66-70": 18007, "71-75": 20745, "76-80": 23725, "81-85": 29190, "86+": 32108},
+                            "200000": {"60-65": 18760, "66-70": 28141, "71-75": 32419, "76-80": 37079, "81-85": 45610, "86+:": 50172},
+                            "300000": {"60-65": 23297, "66-70": 34946, "71-75": 40261, "76-80": 46047, "81-85": 56640, "86+": 62304},
+                            "400000": {"60-65": 26765, "66-70": 40146, "71-75": 46250, "76-80": 52899, "81-85": 65066, "86+": 71573},
+                            "500000": {"60-65": 32115, "66-70": 48174, "71-75": 55501, "76-80": 63479, "81-85": 78079, "86+": 85888},
+                            "600000": {"60-65": 38360, "66-70": 57539, "71-75": 66288, "76-80": 75815, "81-85": 93255, "86+": 102582},
+                            "700000": {"60-65": 45318, "66-70": 67977, "71-75": 78311, "76-80": 89568, "81-85": 110230, "86+": 121252},
+                            "800000": {"60-65": 49848, "66-70": 74773, "71-75": 86142, "76-80": 98525, "81-85": 121252, "86+": 133377},
+                            "900000": {"60-65": 51908, "66-70": 77863, "71-75": 89703, "76-80": 102596, "81-85": 126262, "86+": 138887},
+                            "1000000": {"60-65": 53466, "66-70": 80200, "71-75": 92393, "76-80": 105675, "81-85": 130050, "86+": 143056}
+                        },
+                        "Dependent": {
+                            "100000": {"50-55": 2758, "56-60": 4607, "61-65": 6946, "66-70": 10793, "71-75": 12891, "76-80": 15289, "81-85": 18810, "86+": 20690},
+                            "200000": {"50-55": 4311, "56-60": 7198, "61-65": 10856, "66-70": 16866, "71-75": 20143, "76-80": 23893, "81-85": 29391, "86+": 32329},
+                            "300000": {"50-55": 5355, "56-60": 8940, "61-65": 13483, "66-70": 20944, "71-75": 25015, "76-80": 29671, "81-85": 36500, "86+": 40147},
+                            "400000": {"50-55": 6151, "56-60": 10272, "61-65": 15490, "66-70": 24062, "71-75": 28736, "76-80": 34087, "81-85": 41929, "86+": 46120},
+                            "500000": {"50-55": 7381, "56-60": 12325, "61-65": 18585, "66-70": 28873, "71-75": 34483, "76-80": 40904, "81-85": 50314, "86+": 55344},
+                            "600000": {"50-55": 8815, "56-60": 14721, "61-65": 22199, "66-70": 34487, "71-75": 41187, "76-80": 48854, "81-85": 60093, "86+": 66100},
+                            "700000": {"50-55": 10415, "56-60": 17391, "61-65": 26227, "66-70": 40743, "71-75": 48657, "76-80": 57715, "81-85": 71032, "86+": 78131},
+                            "800000": {"50-55": 11456, "56-60": 19128, "61-65": 28848, "66-70": 44816, "71-75": 53523, "76-80": 63486, "81-85": 78135, "86+": 85944},
+                            "900000": {"50-55": 11929, "56-60": 19920, "61-65": 30040, "66-70": 46667, "71-75": 55735, "76-80": 66110, "81-85": 81363, "86+": 89494},
+                            "1000000": {"50-55": 12288, "56-60": 20518, "61-65": 30942, "66-70": 48068, "71-75": 57405, "76-80": 68094, "81-85": 83805, "86+": 92179}
+                        }
+                    }
+                },
+                "Zone 2": {
+                    "Plan A": {
+                        "Individual": {
+                            "100000": {"60-65": 7802, "66-70": 11704, "71-75": 13484, "76-80": 15422, "81-85": 18973, "86+": 20871},
+                            "200000": {"60-65": 12194, "66-70": 18291, "71-75": 21073, "76-80": 24102, "81-85": 29646, "86+": 32612},
+                            "300000": {"60-65": 15143, "66-70": 22715, "71-75": 26169, "76-80": 29930, "81-85": 36816, "86+": 40498},
+                            "400000": {"60-65": 17397, "66-70": 26095, "71-75": 30062, "76-80": 34385, "81-85": 42292, "86+": 46523},
+                            "500000": {"60-65": 20876, "66-70": 31313, "71-75": 36075, "76-80": 41261, "81-85": 50752, "86+": 55828},
+                            "600000": {"60-65": 24933, "66-70": 37400, "71-75": 43087, "76-80": 49280, "81-85": 60616, "86+": 66678},
+                            "700000": {"60-65": 29457, "66-70": 44185, "71-75": 50903, "76-80": 58219, "81-85": 71650, "86+": 78814},
+                            "800000": {"60-65": 32401, "66-70": 48603, "71-75": 55993, "76-80": 64041, "81-85": 78814, "86+": 86695},
+                            "900000": {"60-65": 33741, "66-70": 50611, "71-75": 58307, "76-80": 66688, "81-85": 82071, "86+": 90276},
+                            "1000000": {"60-65": 34753, "66-70": 52130, "71-75": 60055, "76-80": 68689, "81-85": 84533, "86+": 92986}
+                        },
+                        "Dependent": {
+                            "100000": {"50-55": 1793, "56-60": 2994, "61-65": 4515, "66-70": 7015, "71-75": 8379, "76-80": 9937, "81-85": 12225, "86+": 13449},
+                            "200000": {"50-55": 2802, "56-60": 4679, "61-65": 7056, "66-70": 10963, "71-75": 13094, "76-80": 15531, "81-85": 19103, "86+": 21014},
+                            "300000": {"50-55": 3480, "56-60": 5811, "61-65": 8763, "66-70": 13614, "71-75": 16261, "76-80": 19287, "81-85": 23723, "86+": 26096},
+                            "400000": {"50-55": 3998, "56-60": 6676, "61-65": 10067, "66-70": 15640, "71-75": 18679, "76-80": 22157, "81-85": 27251, "86+": 29978},
+                            "500000": {"50-55": 4797, "56-60": 8011, "61-65": 12080, "66-70": 18767, "71-75": 22416, "76-80": 26588, "81-85": 32702, "86+": 35974},
+                            "600000": {"50-55": 5729, "56-60": 9568, "61-65": 14428, "66-70": 22416, "71-75": 26773, "76-80": 31755, "81-85": 39058, "86+": 42966},
+                            "700000": {"50-55": 6769, "56-60": 11304, "61-65": 17046, "66-70": 26482, "71-75": 31629, "76-80": 37515, "81-85": 46168, "86+": 50786},
+                            "800000": {"50-55": 7445, "56-60": 12434, "61-65": 18749, "66-70": 29130, "71-75": 34792, "76-80": 41267, "81-85": 50784, "86+": 55865},
+                            "900000": {"50-55": 7753, "56-60": 12948, "61-65": 19525, "66-70": 30334, "71-75": 36230, "76-80": 42972, "81-85": 52883, "86+": 58172},
+                            "1000000": {"50-55": 7986, "56-60": 13336, "61-65": 20111, "66-70": 31244, "71-75": 37316, "76-80": 44262, "81-85": 54470, "86+": 59918}
+                        }
+                    },
+                    "Plan B": {
+                        "Individual": {
+                            "100000": {"60-65": 10142, "66-70": 15214, "71-75": 17530, "76-80": 20048, "81-85": 24664, "86+": 27132},
+                            "200000": {"60-65": 15852, "66-70": 23779, "71-75": 27393, "76-80": 31333, "81-85": 38539, "86+": 42395},
+                            "300000": {"60-65": 19686, "66-70": 29529, "71-75": 34020, "76-80": 38909, "81-85": 47861, "86+": 52647},
+                            "400000": {"60-65": 22617, "66-70": 33922, "71-75": 39081, "76-80": 44700, "81-85": 54980, "86+": 60480},
+                            "500000": {"60-65": 27138, "66-70": 40706, "71-75": 46898, "76-80": 53639, "81-85": 65977, "86+": 72576},
+                            "600000": {"60-65": 32413, "66-70": 48620, "71-75": 56013, "76-80": 64064, "81-85": 78800, "86+": 86681},
+                            "700000": {"60-65": 38294, "66-70": 57441, "71-75": 66174, "76-80": 75685, "81-85": 93144, "86+": 102457},
+                            "800000": {"60-65": 42122, "66-70": 63183, "71-75": 72791, "76-80": 83253, "81-85": 102457, "86+": 112704},
+                            "900000": {"60-65": 43863, "66-70": 65794, "71-75": 75798, "76-80": 86694, "81-85": 106692, "86+": 117359},
+                            "1000000": {"60-65": 45179, "66-70": 67770, "71-75": 78072, "76-80": 89295, "81-85": 109893, "86+": 120882}
+                        },
+                        "Dependent": {
+                            "100000": {"50-55": 2332, "56-60": 3892, "61-65": 5869, "66-70": 9120, "71-75": 10892, "76-80": 12918, "81-85": 15893, "86+": 17483},
+                            "200000": {"50-55": 3643, "56-60": 6083, "61-65": 9173, "66-70": 14253, "71-75": 17022, "76-80": 20191, "81-85": 24834, "86+": 27318},
+                            "300000": {"50-55": 4523, "56-60": 7555, "61-65": 11392, "66-70": 17699, "71-75": 21138, "76-80": 25072, "81-85": 30840, "86+:": 33924},
+                            "400000": {"50-55": 5197, "56-60": 8679, "61-65": 13087, "66-70": 20331, "71-75": 24284, "76-80": 28805, "81-85": 35427, "86+": 38973},
+                            "500000": {"50-55": 6236, "56-60": 10414, "61-65": 15704, "66-70": 24398, "71-75": 29141, "76-80": 34564, "81-85": 42513, "86+": 46766},
+                            "600000": {"50-55": 7449, "56-60": 12437, "61-65": 18756, "66-70": 29141, "71-75": 34806, "76-80": 41282, "81-85": 50776, "86+": 55856},
+                            "700000": {"50-55": 8800, "56-60": 14695, "61-65": 22160, "66-70": 34427, "71-75": 41119, "76-80": 48770, "81-85": 60019, "86+": 66022},
+                            "800000": {"50-55": 9680, "56-60": 16163, "61-65": 24374, "66-70": 37869, "71-75": 45230, "76-80": 53647, "81-85": 66019, "86+": 72624},
+                            "900000": {"50-55": 10079, "56-60": 16831, "61-65": 25383, "66-70": 39435, "71-75": 47099, "76-80": 55865, "81-85": 68748, "86+": 75624},
+                            "1000000": {"50-55": 10382, "56-60": 17337, "61-65": 26144, "66-70": 40617, "71-75": 48511, "76-80": 57540, "81-85": 70823, "86+": 77905}
+                        }
                     }
                 }
-            },
-            "Zone 2": {
-                "Plan A": {
-                    "Individual": {
-                        "100000": {"60-65": 7802, "66-70": 11704, "71-75": 13484, "76-80": 15422, "81-85": 18973, "86+": 20871},
-                        "200000": {"60-65": 12194, "66-70": 18291, "71-75": 21073, "76-80": 24102, "81-85": 29646, "86+": 32612}
-                    }
-                }
-            }
-        };
-
-        // State
-        let familyRows = [{
-            name: "",
-            age: "",
-            relationship: "Self",
-            sumInsured: "100000",
-            premium: "0"
-        }];
-
-        // DOM Elements
-        const policyTypeSelect = document.getElementById("policy-type");
-        const zoneSelect = document.getElementById("zone");
-        const citiesLabel = document.getElementById("cities-label");
-        const familyTableBody = document.getElementById("family-table-body");
-        const addRowBtn = document.getElementById("add-row-btn");
-        const calculateBtn = document.getElementById("calculate-btn");
-        const resetBtn = document.getElementById("reset-btn");
-        const resultTableBody = document.getElementById("result-table-body");
-        const summaryDiv = document.getElementById("summary");
-        const errorMessageDiv = document.getElementById("error-message");
-
-        // Functions
-        function showError(message) {
-            errorMessageDiv.textContent = message;
-            errorMessageDiv.classList.remove("hidden");
-            console.error(message);
-        }
-
-        function clearError() {
-            errorMessageDiv.textContent = "";
-            errorMessageDiv.classList.add("hidden");
-        }
-
-        function updateZoneCities() {
-            const zone = zoneSelect.value;
-            const cities = {
-                "Zone 1": "Gujarat, Delhi NCT, Mumbai, Nagpur, Pune",
-                "Zone 2": "Rest of India"
             };
-            citiesLabel.textContent = `${zone}: ${cities[zone]}`;
-            if (zone === "Zone 2") {
-                alert("Zonal Copay 18.5% if treated in Zone 1");
-            }
-        }
 
-        function validateAge(ageStr, index) {
-            if (!ageStr) return true;
-            try {
+            const paRates = {
+                "100000": 90, "200000": 180, "300000": 270, "400000": 360, "500000": 450,
+                "600000": 540, "700000": 630, "800000": 720, "900000": 810, "1000000": 900
+            };
+
+            const ciRates = {
+                "100000": {"50-55": 1359, "56-59": 2536, "60-65": 3639, "66-70": 7804, "71-75": 13074, "76-80": 19653, "81-85": 21618, "86+": 24861},
+                "200000": {"50-55": 2718, "56-59": 5071, "60-65": 7278, "66-70": 15607, "71-75": 26148, "76-80": 39306, "81-85": 43236, "86+": 49722},
+                "300000": {"50-55": 4077, "56-59": 7607, "60-65": 10917, "66-70": 23411, "71-75": 39222, "76-80": 58958, "81-85": 64854, "86+": 74582},
+                "400000": {"50-55": 5436, "56-59": 10143, "60-65": 14556, "66-70": 31214, "71-75": 52296, "76-80": 78611, "81-85": 86472, "86+": 99443},
+                "500000": {"50-55": 6795, "56-59": 12679, "60-65": 18196, "66-70": 39018, "71-75": 65371, "76-80": 98264, "81-85": 108090, "86+": 124304},
+                "600000": {"50-55": 8153, "56-59": 15214, "60-65": 21835, "66-70": 46822, "71-75": 78445, "76-80": 117917, "81-85": 129708, "86+": 149165},
+                "700000": {"50-55": 9512, "56-59": 17750, "60-65": 25474, "66-70": 54625, "71-75": 91519, "76-80": 137570, "81-85": 151327, "86+": 174025},
+                "800000": {"50-55": 10871, "56-59": 20286, "60-65": 29113, "66-70": 62429, "71-75": 104593, "76-80": 157222, "81-85": 172945, "86+": 198886},
+                "900000": {"50-55": 12230, "56-59": 22822, "60-65": 32752, "66-70": 70232, "71-75": 117667, "76-80": 176875, "81-85": 194563, "86+": 223747},
+                "1000000": {"50-55": 13589, "56-59": 25357, "60-65": 36391, "66-70": 78036, "71-75": 130741, "76-80": 196528, "81-85": 216181, "86+": 248608}
+            };
+
+            const outpatientRates = {
+                "2000": 1400, "4000": 2800, "5000": 3500, "7500": 5250, "10000": 7000, "15000": 10500
+            };
+
+            const installmentRates = {
+                "Half-Yearly": [0.525, 0.50],
+                "Quarterly": [0.285, 0.25, 0.25, 0.25]
+            };
+
+            // Update zone cities
+            function updateZoneCities() {
+                const zone = $('#zone').val();
+                const cities = {
+                    "Zone 1": "Gujarat, Delhi NCT, Mumbai, Nagpur, Pune",
+                    "Zone 2": "Rest of India"
+                };
+                $('#zoneCities').text(`${zone}: ${cities[zone]}`);
+                if (zone === "Zone 2") {
+                    alert("Zonal Copay 18.5% if treated in Zone 1");
+                }
+            }
+
+            // Update relationship options
+            function updateRelationshipOptions() {
+                const policyType = $('#policyType').val();
+                $('#familyTable tbody tr').each(function(index) {
+                    const relationshipSelect = $(this).find('.relationship-select');
+                    const currentRelationship = relationshipSelect.val();
+                    if (policyType === "Individual") {
+                        relationshipSelect.html('<option value="Self">Self</option><option value="Spouse">Spouse</option>');
+                        if (index === 0) {
+                            relationshipSelect.val("Self").prop('disabled', true);
+                        } else {
+                            relationshipSelect.val(currentRelationship !== "Self" ? currentRelationship : "Spouse").prop('disabled', false);
+                        }
+                    } else {
+                        if (index === 0) {
+                            relationshipSelect.html('<option value="Self">Self</option>').val("Self").prop('disabled', true);
+                        } else {
+                            relationshipSelect.html(`
+                                <option value="Spouse">Spouse</option>
+                                <option value="Son">Son</option>
+                                <option value="Daughter">Daughter</option>
+                                <option value="Father">Father</option>
+                                <option value="Mother">Mother</option>
+                            `).val(currentRelationship !== "Self" ? currentRelationship : "Spouse").prop('disabled', false);
+                        }
+                    }
+                    updateGender(index);
+                });
+                updateSumInsuredOptions();
+            }
+
+            // Update gender based on relationship
+            function updateGender(index) {
+                const row = $('#familyTable tbody tr').eq(index);
+                const relationship = row.find('.relationship-select').val();
+                const genderSelect = row.find('.gender-select');
+                const genderMap = {
+                    "Son": "Male",
+                    "Daughter": "Female",
+                    "Father": "Male",
+                    "Mother": "Female"
+                };
+                if (genderMap[relationship]) {
+                    genderSelect.val(genderMap[relationship]).prop('disabled', true);
+                } else {
+                    genderSelect.prop('disabled', false);
+                }
+            }
+
+            // Update sum insured options
+            function updateSumInsuredOptions() {
+                const policyType = $('#policyType').val();
+                $('#familyTable tbody tr').each(function(index) {
+                    const row = $(this);
+                    const sumInsuredSelect = row.find('.sum-insured-select');
+                    const currentSi = sumInsuredSelect.val();
+                    let options = sumInsuredOptions.map(si => `<option value="${si}">${si}</option>`).join('');
+                    sumInsuredSelect.html(options);
+                    if (!sumInsuredOptions.includes(currentSi)) {
+                        sumInsuredSelect.val(sumInsuredOptions[0]);
+                    }
+                    if (policyType === "Floater") {
+                        if (index === 0) {
+                            sumInsuredSelect.prop('disabled', false);
+                        } else {
+                            sumInsuredSelect.val($('#familyTable tbody tr:first .sum-insured-select').val()).prop('disabled', true);
+                        }
+                    } else {
+                        sumInsuredSelect.prop('disabled', false);
+                    }
+                    // Update PA and CI options
+                    const si = sumInsuredSelect.val();
+                    const paCiOptions = ["0"].concat(sumInsuredOptions.filter(opt => parseInt(opt) <= parseInt(si)));
+                    const paSelect = row.find('.pa-si-select');
+                    const ciSelect = row.find('.ci-si-select');
+                    paSelect.html(paCiOptions.map(opt => `<option value="${opt}">${opt}</option>`).join(''));
+                    ciSelect.html(paCiOptions.map(opt => `<option value="${opt}">${opt}</option>`).join(''));
+                    if (!paCiOptions.includes(paSelect.val())) paSelect.val("0");
+                    if (!paCiOptions.includes(ciSelect.val())) ciSelect.val("0");
+                });
+            }
+
+            // Validate age
+            function validateAge(ageStr, index) {
+                if (!ageStr) return true;
                 const age = parseInt(ageStr);
-                if (age < 60) {
-                    alert("Minimum age for all members is 60 years");
+                if (isNaN(age)) return false;
+                const policyType = $('#policyType').val();
+                const relationship = $('#familyTable tbody tr').eq(index).find('.relationship-select').val();
+                if (age < 50) {
+                    alert("Minimum age for all members is 50 years");
+                    return false;
+                }
+                if (relationship === "Self" && age < 60) {
+                    alert("Self must be 60 or older for both Individual and Floater policies");
                     return false;
                 }
                 if (age > 80) {
                     alert("Entry age shall be between 60-80 for fresh policy");
                 }
+                if (policyType === "Individual" && age < 60) {
+                    alert("All members must be 60 or older for Individual policy");
+                    return false;
+                }
+                if (policyType === "Floater" && relationship === "Spouse" && age < 50) {
+                    alert("Spouse must be 50 or older in Floater policy");
+                    return false;
+                }
                 return true;
-            } catch (e) {
-                return false;
             }
-        }
 
-        function renderFamilyTable() {
-            familyTableBody.innerHTML = "";
-            familyRows.forEach((row, index) => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td class="border p-1">
-                        <input type="text" value="${row.name}" class="w-full p-1 text-sm border rounded" data-index="${index}" data-field="name">
-                    </td>
-                    <td class="border p-1">
-                        <input type="text" value="${row.age}" class="w-full p-1 text-sm border rounded" data-index="${index}" data-field="age">
-                    </td>
-                    <td class="border p-1">
-                        <select class="w-full p-1 text-sm border rounded" data-index="${index}" data-field="relationship" ${index === 0 ? "disabled" : ""}>
-                            <option value="Self" ${row.relationship === "Self" ? "selected" : ""}>Self</option>
-                            <option value="Spouse" ${row.relationship === "Spouse" ? "selected" : ""}>Spouse</option>
-                        </select>
-                    </td>
-                    <td class="border p-1">
-                        <select class="w-full p-1 text-sm border rounded" data-index="${index}" data-field="sumInsured">
-                            <option value="100000" ${row.sumInsured === "100000" ? "selected" : ""}>100000</option>
-                            <option value="200000" ${row.sumInsured === "200000" ? "selected" : ""}>200000</option>
-                        </select>
-                    </td>
-                    <td class="border p-1">${row.premium}</td>
-                    <td class="border p-1">
-                        ${index >= 1 ? `<button class="bg-red-500 text-white px-2 py-1 rounded text-xs" data-index="${index}" data-action="delete">Del</button>` : ""}
-                    </td>
+            // Check medical conditions
+            function checkMedicalConditions(index) {
+                const row = $('#familyTable tbody tr').eq(index);
+                const diabetic = row.find('.diabetic-check').is(':checked');
+                const hypertension = row.find('.hypertension-check').is(':checked');
+                if (diabetic || hypertension) {
+                    alert("Copay 10% for either one & 25% for Both");
+                }
+            }
+
+            // Add family row
+            function addFamilyRow(data = {}) {
+                const index = $('#familyTable tbody tr').length;
+                const policyType = $('#policyType').val();
+                const relationshipOptions = index === 0 ? '<option value="Self">Self</option>' : 
+                    (policyType === "Individual" ? 
+                        '<option value="Spouse">Spouse</option>' : 
+                        '<option value="Spouse">Spouse</option><option value="Son">Son</option><option value="Daughter">Daughter</option><option value="Father">Father</option><option value="Mother">Mother</option>');
+                const row = `
+                    <tr>
+                        <td><input type="text" class="form-control name-input" value="${data.name || ''}"></td>
+                        <td><input type="number" class="form-control age-input" value="${data.age || ''}" min="0"></td>
+                        <td>
+                            <select class="form-select gender-select">
+                                <option value="Male" ${data.gender === 'Male' ? 'selected' : ''}>Male</option>
+                                <option value="Female" ${data.gender === 'Female' ? 'selected' : ''}>Female</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-select relationship-select" ${index === 0 ? 'disabled' : ''}>
+                                ${relationshipOptions}
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-select sum-insured-select">
+                                ${sumInsuredOptions.map(si => `<option value="${si}" ${data.sumInsured === si ? 'selected' : ''}>${si}</option>`).join('')}
+                            </select>
+                        </td>
+                        <td><input type="checkbox" class="form-check-input diabetic-check" ${data.diabetic ? 'checked' : ''}></td>
+                        <td><input type="checkbox" class="form-check-input hypertension-check" ${data.hypertension ? 'checked' : ''}></td>
+                        <td>
+                            <select class="form-select outpatient-select">
+                                ${outpatientOptions.map(opt => `<option value="${opt}" ${data.outpatient === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-select pa-si-select">
+                                <option value="0" ${data.paSi === '0' ? 'selected' : ''}>0</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-select ci-si-select">
+                                <option value="0" ${data.ciSi === '0' ? 'selected' : ''}>0</option>
+                            </select>
+                        </td>
+                        <td><span class="premium-label">${data.premium || '0'}</span></td>
+                        <td><button class="btn btn-danger btn-sm delete-btn" ${index === 0 ? 'disabled' : ''}>Del</button></td>
+                    </tr>
                 `;
-                familyTableBody.appendChild(tr);
-            });
-        }
-
-        function addFamilyRow() {
-            familyRows.push({
-                name: "",
-                age: "",
-                relationship: "Spouse",
-                sumInsured: "100000",
-                premium: "0"
-            });
-            renderFamilyTable();
-        }
-
-        function deleteFamilyRow(index) {
-            if (familyRows.length <= 1) {
-                alert("At least 1 family member is required");
-                return;
-            }
-            familyRows.splice(index, 1);
-            renderFamilyTable();
-        }
-
-        function calculatePremium() {
-            clearError();
-            for (let i = 0; i < familyRows.length; i++) {
-                if (!familyRows[i].name) {
-                    showError(`Name is required for member ${i + 1}`);
-                    return;
-                }
-                if (!familyRows[i].age) {
-                    showError(`Age is required for member ${i + 1}`);
-                    return;
-                }
+                $('#familyTable tbody').append(row);
+                updateRelationshipOptions();
+                updateSumInsuredOptions();
+                // Event listeners
+                $('#familyTable tbody tr:last').find('.age-input').on('change', function() {
+                    if (!validateAge($(this).val(), index)) {
+                        $(this).val('');
+                    }
+                });
+                $('#familyTable tbody tr:last').find('.relationship-select').on('change', () => updateGender(index));
+                $('#familyTable tbody tr:last').find('.sum-insured-select').on('change', updateSumInsuredOptions);
+                $('#familyTable tbody tr:last').find('.diabetic-check, .hypertension-check').on('change', () => checkMedicalConditions(index));
+                $('#familyTable tbody tr:last').find('.delete-btn').on('click', function() {
+                    if ($('#familyTable tbody tr').length > 1) {
+                        $(this).closest('tr').remove();
+                        updateRelationshipOptions();
+                    } else {
+                        alert("At least 1 family member is required");
+                    }
+                });
             }
 
-            resultTableBody.innerHTML = "";
-            let totalBasePremium = 0;
+            // Reset fields
+            function resetFields() {
+                $('#policyType').val("Individual");
+                $('#zone').val("Zone 1");
+                $('#planType').val("Plan A");
+                $('#copayment').val("0");
+                $('#tpa').prop('checked', true);
+                $('#installment').val("None");
+                $('#familyTable tbody').empty();
+                addFamilyRow();
+                resultTable.clear().draw();
+                $('#summaryLabel').text("Premium will be displayed here");
+                updateZoneCities();
+            }
 
-            familyRows.forEach((row, index) => {
-                const age = parseInt(row.age) || 0;
-                const si = row.sumInsured;
-                const ageGroup = age <= 65 ? "60-65" :
-                                 age <= 70 ? "66-70" :
-                                 age <= 75 ? "71-75" :
-                                 age <= 80 ? "76-80" :
-                                 age <= 85 ? "81-85" : "86+";
+            // Calculate premium
+            function calculatePremium() {
+                const zone = $('#zone').val();
+                const plan = $('#planType').val();
+                const policyType = $('#policyType').val();
+                const copaymentDiscount = 1 - (parseInt($('#copayment').val()) / 100);
+                const installmentOption = $('#installment').val();
+                const tpaLoading = $('#tpa').is(':checked') ? 0.035 : 0;
+                let totalBasePremium = 0, totalPaPremium = 0, totalCiPremium = 0, outpatientPremium = 0;
 
-                let basePremium;
-                try {
-                    basePremium = rates[zoneSelect.value]["Plan A"]["Individual"][si][ageGroup] || 0;
-                } catch (e) {
-                    showError(`Invalid rate for SI: ${si}, Age: ${ageGroup}`);
-                    return;
+                // Validate inputs
+                let valid = true;
+                $('#familyTable tbody tr').each(function(index) {
+                    const name = $(this).find('.name-input').val();
+                    const age = $(this).find('.age-input').val();
+                    if (!name) {
+                        alert(`Name is required for member ${index + 1}`);
+                        valid = false;
+                    }
+                    if (!age) {
+                        alert(`Age is required for member ${index + 1}`);
+                        valid = false;
+                    }
+                });
+                if (!valid) return;
+
+                // Clear results
+                resultTable.clear().draw();
+
+                // Calculate premiums
+                $('#familyTable tbody tr').each(function() {
+                    const row = $(this);
+                    const age = parseInt(row.find('.age-input').val()) || 0;
+                    const si = row.find('.sum-insured-select').val();
+                    const relationship = row.find('.relationship-select').val();
+                    const diabetic = row.find('.diabetic-check').is(':checked');
+                    const hypertension = row.find('.hypertension-check').is(':checked');
+                    const outpatientSi = row.find('.outpatient-select').val();
+                    const paSi = row.find('.pa-si-select').val();
+                    const ciSi = row.find('.ci-si-select').val();
+
+                    // Determine age group
+                    let ageGroup;
+                    if (50 <= age && age <= 55) ageGroup = "50-55";
+                    else if (56 <= age && age <= 59) ageGroup = "56-60";
+                    else if (60 <= age && age <= 65) ageGroup = "61-65";
+                    else if (66 <= age && age <= 70) ageGroup = "66-70";
+                    else if (71 <= age && age <= 75) ageGroup = "71-75";
+                    else if (76 <= age && age <= 80) ageGroup = "76-80";
+                    else if (81 <= age && age <= 85) ageGroup = "81-85";
+                    else ageGroup = "86+";
+
+                    // Base premium
+                    const rateType = relationship === "Self" || policyType === "Individual" ? "Individual" : "Dependent";
+                    let basePremium;
+                    try {
+                        basePremium = rates[zone][plan][rateType][si][ageGroup];
+                    } catch (e) {
+                        alert(`Invalid rate for ${rateType}, SI: ${si}, Age: ${ageGroup} in ${zone}, ${plan}`);
+                        return;
+                    }
+
+                    // Medical condition loading
+                    let medicalLoading = 0;
+                    if (diabetic && hypertension) medicalLoading = 0.30;
+                    else if (diabetic || hypertension) medicalLoading = 0.135;
+                    basePremium *= (1 + medicalLoading);
+                    totalBasePremium += basePremium;
+
+                    // Outpatient premium
+                    let outpatientMemberPremium = 0;
+                    if (outpatientSi !== "0") {
+                        outpatientMemberPremium = outpatientRates[outpatientSi];
+                        outpatientPremium += outpatientMemberPremium;
+                    }
+
+                    // PA premium
+                    let paPremium = 0;
+                    if (paSi !== "0") {
+                        paPremium = paRates[paSi];
+                        totalPaPremium += paPremium;
+                    }
+
+                    // CI premium
+                    let ciPremium = 0;
+                    if (ciSi !== "0") {
+                        ciPremium = ciRates[ciSi][ageGroup];
+                        totalCiPremium += ciPremium;
+                    }
+
+                    // Update row premium
+                    const rowPremium = basePremium + outpatientMemberPremium + paPremium + ciPremium;
+                    row.find('.premium-label').text(Math.floor(rowPremium));
+
+                    // Add to result table
+                    resultTable.row.add([
+                        `${row.find('.name-input').val()} (Base Premium)`,
+                        `Outpatient: ₹${outpatientSi}, PA: ₹${paSi}, CI: ₹${ciSi}`,
+                        `₹${Math.floor(rowPremium)}`
+                    ]).draw();
+                });
+
+                // Apply discounts and loadings
+                let totalPremium = totalBasePremium + outpatientPremium + totalPaPremium + totalCiPremium;
+                totalPremium *= copaymentDiscount;
+                const tpaLoadingAmount = totalPremium * tpaLoading;
+                totalPremium += tpaLoadingAmount;
+
+                // GST
+                const gst = totalPremium * 0.18;
+                const finalPremium = totalPremium + gst;
+
+                // Update result table with totals
+                if (tpaLoadingAmount > 0) {
+                    resultTable.row.add(["TPA Loading (3.5%)", "", `₹${Math.floor(tpaLoadingAmount)}`]).draw();
+                }
+                resultTable.row.add(["Subtotal", "", `₹${Math.floor(totalPremium)}`]).draw();
+                resultTable.row.add(["GST (18%)", "", `₹${Math.floor(gst)}`]).draw();
+                resultTable.row.add(["Total Premium", "", `₹${Math.floor(finalPremium)}`]).draw();
+
+                // Calculate and display installments
+                let installmentAmounts = [];
+                if (installmentOption in installmentRates) {
+                    const rates = installmentRates[installmentOption];
+                    installmentAmounts = rates.map(rate => finalPremium * rate);
+                    const labels = rates.map((rate, i) => `${['1st', '2nd', '3rd', '4th'][i]} Installment (${rate * 100}%)`);
+                    labels.forEach((label, i) => {
+                        resultTable.row.add([label, "", `₹${Math.floor(installmentAmounts[i])}`]).draw();
+                    });
                 }
 
-                totalBasePremium += basePremium;
-                familyRows[index].premium = Math.floor(basePremium).toString();
+                // Update summary label
+                let summaryText = `Total Premium: ₹${Math.floor(finalPremium)}`;
+                if (installmentAmounts.length) {
+                    if (installmentOption === "Half-Yearly") {
+                        summaryText += ` (Half Yearly: 1st ₹${Math.floor(installmentAmounts[0])}, 2nd ₹${Math.floor(installmentAmounts[1])})`;
+                    } else if (installmentOption === "Quarterly") {
+                        summaryText += ` (Quarterly: 1st ₹${Math.floor(installmentAmounts[0])}, 2nd ₹${Math.floor(installmentAmounts[1])}, 3rd ₹${Math.floor(installmentAmounts[2])}, 4th ₹${Math.floor(installmentAmounts[3])})`;
+                    }
+                }
+                $('#summaryLabel').text(summaryText);
+            }
 
-                const tr = document.createElement("tr");
-                tr.className = index % 2 === 0 ? "bg-white" : "bg-gray-50";
-                tr.innerHTML = `
-                    <td class="border p-2">${row.name} (Base Premium)</td>
-                    <td class="border p-2">?${Math.floor(basePremium)}</td>
-                `;
-                resultTableBody.appendChild(tr);
-            });
+            // Event listeners
+            $('#zone').on('change', updateZoneCities);
+            $('#policyType, #planType').on('change', updateRelationshipOptions);
+            $('#addRow').on('click', () => addFamilyRow());
+            $('#calculate').on('click', calculatePremium);
+            $('#reset').on('click', resetFields);
 
-            const finalPremium = totalBasePremium;
-            const totalTr = document.createElement("tr");
-            totalTr.className = familyRows.length % 2 === 0 ? "bg-white" : "bg-gray-50";
-            totalTr.innerHTML = `
-                <td class="border p-2">Total Premium</td>
-                <td class="border p-2">?${Math.floor(finalPremium)}</td>
-            `;
-            resultTableBody.appendChild(totalTr);
-
-            summaryDiv.textContent = `Total Premium: ?${Math.floor(finalPremium)}`;
-            renderFamilyTable();
-        }
-
-        function resetFields() {
-            clearError();
-            policyTypeSelect.value = "Individual";
-            zoneSelect.value = "Zone 1";
-            familyRows = [{
-                name: "",
-                age: "",
-                relationship: "Self",
-                sumInsured: "100000",
-                premium: "0"
-            }];
-            renderFamilyTable();
-            resultTableBody.innerHTML = "";
-            summaryDiv.textContent = "Premium will be displayed here";
+            // Initialize
+            addFamilyRow();
             updateZoneCities();
-        }
-
-        // Event Listeners
-        zoneSelect.addEventListener("change", updateZoneCities);
-        addRowBtn.addEventListener("click", addFamilyRow);
-        calculateBtn.addEventListener("click", calculatePremium);
-        resetBtn.addEventListener("click", resetFields);
-
-        familyTableBody.addEventListener("change", (e) => {
-            if (e.target.dataset.field) {
-                const index = parseInt(e.target.dataset.index);
-                const field = e.target.dataset.field;
-                let value = e.target.value;
-                if (field === "age" && !validateAge(value, index)) {
-                    e.target.value = "";
-                    value = "";
-                }
-                familyRows[index][field] = value;
-            }
         });
-
-        familyTableBody.addEventListener("click", (e) => {
-            if (e.target.dataset.action === "delete") {
-                const index = parseInt(e.target.dataset.index);
-                deleteFamilyRow(index);
-            }
-        });
-
-        // Initialize
-        try {
-            updateZoneCities();
-            renderFamilyTable();
-        } catch (error) {
-            showError("Error initializing application. Please check console for details.");
-            console.error("Initialization error:", error);
-        }
     </script>
 </body>
 </html>
