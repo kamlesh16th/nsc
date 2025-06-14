@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Senior Citizen Mediclaim Policy Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f0f4f8; }
+        .table-container { max-height: 256px; overflow-y: auto; }
+    </style>
+</head>
+<body class="font-sans">
+    <div id="app" class="flex justify-center items-center min-h-screen">
+        <div class="bg-gray-100 p-6 w-full max-w-4xl mx-auto rounded-lg shadow-lg">
+            <h1 class="text-2xl font-bold text-blue-900 text-center mb-4">
+                National Senior Citizen Mediclaim Policy Calculator
+            </h1>
+            <div id="error-message" class="text-red-500 text-center mb-4 hidden"></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                <div>
+                    <label class="text-sm font-medium">Policy Type:</label>
+                    <select id="policy-type" class="w-full p-1 text-sm border rounded">
+                        <option value="Individual">Individual</option>
+                        <option value="Floater">Floater</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm font-medium">Zone:</label>
+                    <select id="zone" class="w-full p-1 text-sm border rounded">
+                        <option value="Zone 1">Zone 1</option>
+                        <option value="Zone 2">Zone 2</option>
+                    </select>
+                </div>
+                <div class="col-span-1 sm:col-span-2">
+                    <p id="cities-label" class="text-sm text-gray-600"></p>
+                </div>
+            </div>
+            <div class="mb-4 overflow-x-auto">
+                <table id="family-table" class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-green-100">
+                            <th class="border p-2">Name</th>
+                            <th class="border p-2">Age</th>
+                            <th class="border p-2">Rel.</th>
+                            <th class="border p-2">SI (?)</th>
+                            <th class="border p-2">Premium</th>
+                            <th class="border p-2">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="family-table-body"></tbody>
+                </table>
+            </div>
+            <div class="flex space-x-2 mb-4">
+                <button id="add-row-btn" class="bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold">Add Row</button>
+                <button id="calculate-btn" class="bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold">Calculate</button>
+                <button id="reset-btn" class="bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold">Reset</button>
+            </div>
+            <div class="border rounded p-2 mb-4 table-container">
+                <table id="result-table" class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-green-100">
+                            <th class="border p-2 text-left">Description</th>
+                            <th class="border p-2 text-left">Amount (?)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="result-table-body"></tbody>
+                </table>
+            </div>
+            <div id="summary" class="bg-blue-100 text-blue-900 font-bold text-center p-2 rounded">
+                Premium will be displayed here
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Rate chart (simplified for Zone 1, Plan A, Individual)
+        const rates = {
+            "Zone 1": {
+                "Plan A": {
+                    "Individual": {
+                        "100000": {"60-65": 9233, "66-70": 13851, "71-75": 15958, "76-80": 18250, "81-85": 22453, "86+": 24699},
+                        "200000": {"60-65": 14431, "66-70": 21647, "71-75": 24938, "76-80": 28523, "81-85": 35084, "86+": 38594}
+                    }
+                }
+            },
+            "Zone 2": {
+                "Plan A": {
+                    "Individual": {
+                        "100000": {"60-65": 7802, "66-70": 11704, "71-75": 13484, "76-80": 15422, "81-85": 18973, "86+": 20871},
+                        "200000": {"60-65": 12194, "66-70": 18291, "71-75": 21073, "76-80": 24102, "81-85": 29646, "86+": 32612}
+                    }
+                }
+            }
+        };
+
+        // State
+        let familyRows = [{
+            name: "",
+            age: "",
+            relationship: "Self",
+            sumInsured: "100000",
+            premium: "0"
+        }];
+
+        // DOM Elements
+        const policyTypeSelect = document.getElementById("policy-type");
+        const zoneSelect = document.getElementById("zone");
+        const citiesLabel = document.getElementById("cities-label");
+        const familyTableBody = document.getElementById("family-table-body");
+        const addRowBtn = document.getElementById("add-row-btn");
+        const calculateBtn = document.getElementById("calculate-btn");
+        const resetBtn = document.getElementById("reset-btn");
+        const resultTableBody = document.getElementById("result-table-body");
+        const summaryDiv = document.getElementById("summary");
+        const errorMessageDiv = document.getElementById("error-message");
+
+        // Functions
+        function showError(message) {
+            errorMessageDiv.textContent = message;
+            errorMessageDiv.classList.remove("hidden");
+            console.error(message);
+        }
+
+        function clearError() {
+            errorMessageDiv.textContent = "";
+            errorMessageDiv.classList.add("hidden");
+        }
+
+        function updateZoneCities() {
+            const zone = zoneSelect.value;
+            const cities = {
+                "Zone 1": "Gujarat, Delhi NCT, Mumbai, Nagpur, Pune",
+                "Zone 2": "Rest of India"
+            };
+            citiesLabel.textContent = `${zone}: ${cities[zone]}`;
+            if (zone === "Zone 2") {
+                alert("Zonal Copay 18.5% if treated in Zone 1");
+            }
+        }
+
+        function validateAge(ageStr, index) {
+            if (!ageStr) return true;
+            try {
+                const age = parseInt(ageStr);
+                if (age < 60) {
+                    alert("Minimum age for all members is 60 years");
+                    return false;
+                }
+                if (age > 80) {
+                    alert("Entry age shall be between 60-80 for fresh policy");
+                }
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function renderFamilyTable() {
+            familyTableBody.innerHTML = "";
+            familyRows.forEach((row, index) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td class="border p-1">
+                        <input type="text" value="${row.name}" class="w-full p-1 text-sm border rounded" data-index="${index}" data-field="name">
+                    </td>
+                    <td class="border p-1">
+                        <input type="text" value="${row.age}" class="w-full p-1 text-sm border rounded" data-index="${index}" data-field="age">
+                    </td>
+                    <td class="border p-1">
+                        <select class="w-full p-1 text-sm border rounded" data-index="${index}" data-field="relationship" ${index === 0 ? "disabled" : ""}>
+                            <option value="Self" ${row.relationship === "Self" ? "selected" : ""}>Self</option>
+                            <option value="Spouse" ${row.relationship === "Spouse" ? "selected" : ""}>Spouse</option>
+                        </select>
+                    </td>
+                    <td class="border p-1">
+                        <select class="w-full p-1 text-sm border rounded" data-index="${index}" data-field="sumInsured">
+                            <option value="100000" ${row.sumInsured === "100000" ? "selected" : ""}>100000</option>
+                            <option value="200000" ${row.sumInsured === "200000" ? "selected" : ""}>200000</option>
+                        </select>
+                    </td>
+                    <td class="border p-1">${row.premium}</td>
+                    <td class="border p-1">
+                        ${index >= 1 ? `<button class="bg-red-500 text-white px-2 py-1 rounded text-xs" data-index="${index}" data-action="delete">Del</button>` : ""}
+                    </td>
+                `;
+                familyTableBody.appendChild(tr);
+            });
+        }
+
+        function addFamilyRow() {
+            familyRows.push({
+                name: "",
+                age: "",
+                relationship: "Spouse",
+                sumInsured: "100000",
+                premium: "0"
+            });
+            renderFamilyTable();
+        }
+
+        function deleteFamilyRow(index) {
+            if (familyRows.length <= 1) {
+                alert("At least 1 family member is required");
+                return;
+            }
+            familyRows.splice(index, 1);
+            renderFamilyTable();
+        }
+
+        function calculatePremium() {
+            clearError();
+            for (let i = 0; i < familyRows.length; i++) {
+                if (!familyRows[i].name) {
+                    showError(`Name is required for member ${i + 1}`);
+                    return;
+                }
+                if (!familyRows[i].age) {
+                    showError(`Age is required for member ${i + 1}`);
+                    return;
+                }
+            }
+
+            resultTableBody.innerHTML = "";
+            let totalBasePremium = 0;
+
+            familyRows.forEach((row, index) => {
+                const age = parseInt(row.age) || 0;
+                const si = row.sumInsured;
+                const ageGroup = age <= 65 ? "60-65" :
+                                 age <= 70 ? "66-70" :
+                                 age <= 75 ? "71-75" :
+                                 age <= 80 ? "76-80" :
+                                 age <= 85 ? "81-85" : "86+";
+
+                let basePremium;
+                try {
+                    basePremium = rates[zoneSelect.value]["Plan A"]["Individual"][si][ageGroup] || 0;
+                } catch (e) {
+                    showError(`Invalid rate for SI: ${si}, Age: ${ageGroup}`);
+                    return;
+                }
+
+                totalBasePremium += basePremium;
+                familyRows[index].premium = Math.floor(basePremium).toString();
+
+                const tr = document.createElement("tr");
+                tr.className = index % 2 === 0 ? "bg-white" : "bg-gray-50";
+                tr.innerHTML = `
+                    <td class="border p-2">${row.name} (Base Premium)</td>
+                    <td class="border p-2">?${Math.floor(basePremium)}</td>
+                `;
+                resultTableBody.appendChild(tr);
+            });
+
+            const finalPremium = totalBasePremium;
+            const totalTr = document.createElement("tr");
+            totalTr.className = familyRows.length % 2 === 0 ? "bg-white" : "bg-gray-50";
+            totalTr.innerHTML = `
+                <td class="border p-2">Total Premium</td>
+                <td class="border p-2">?${Math.floor(finalPremium)}</td>
+            `;
+            resultTableBody.appendChild(totalTr);
+
+            summaryDiv.textContent = `Total Premium: ?${Math.floor(finalPremium)}`;
+            renderFamilyTable();
+        }
+
+        function resetFields() {
+            clearError();
+            policyTypeSelect.value = "Individual";
+            zoneSelect.value = "Zone 1";
+            familyRows = [{
+                name: "",
+                age: "",
+                relationship: "Self",
+                sumInsured: "100000",
+                premium: "0"
+            }];
+            renderFamilyTable();
+            resultTableBody.innerHTML = "";
+            summaryDiv.textContent = "Premium will be displayed here";
+            updateZoneCities();
+        }
+
+        // Event Listeners
+        zoneSelect.addEventListener("change", updateZoneCities);
+        addRowBtn.addEventListener("click", addFamilyRow);
+        calculateBtn.addEventListener("click", calculatePremium);
+        resetBtn.addEventListener("click", resetFields);
+
+        familyTableBody.addEventListener("change", (e) => {
+            if (e.target.dataset.field) {
+                const index = parseInt(e.target.dataset.index);
+                const field = e.target.dataset.field;
+                let value = e.target.value;
+                if (field === "age" && !validateAge(value, index)) {
+                    e.target.value = "";
+                    value = "";
+                }
+                familyRows[index][field] = value;
+            }
+        });
+
+        familyTableBody.addEventListener("click", (e) => {
+            if (e.target.dataset.action === "delete") {
+                const index = parseInt(e.target.dataset.index);
+                deleteFamilyRow(index);
+            }
+        });
+
+        // Initialize
+        try {
+            updateZoneCities();
+            renderFamilyTable();
+        } catch (error) {
+            showError("Error initializing application. Please check console for details.");
+            console.error("Initialization error:", error);
+        }
+    </script>
+</body>
+</html>
